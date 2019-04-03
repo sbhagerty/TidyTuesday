@@ -1,0 +1,51 @@
+---
+title: "TidyTuesday_04022019"
+author: "Shannon B. Hagerty"
+date: "4/2/2019"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(ggthemes)
+library(gganimate)
+library(lubridate)
+```
+
+Getting Data organized
+```{r}
+bike_traffic <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-02/bike_traffic.csv")
+bike_traffic<- bike_traffic %>% mutate(date = mdy_hms(date))
+bike_traffic <- bike_traffic %>% mutate(Year = year(date)) %>% 
+  mutate(weekDay=wday(date,label=TRUE))%>%
+    mutate(Month = month(date, label=TRUE))%>%
+    mutate(hour = hour(date)) %>% mutate(day = day(date))
+bike_traffic<-bike_traffic %>% mutate(bike_count = replace_na(bike_traffic$bike_count, 0))
+bike_traffic<-bike_traffic %>% mutate(ped_count = replace_na(bike_traffic$ped_count, 0))
+
+bike_traffic<- bike_traffic %>% mutate(WeekOrWork = case_when(weekDay=='Sat'~'Weekend', weekDay=='Sun'~'Weekend',
+              weekDay == 'Mon'~'Weekday',weekDay == 'Tue'~'Weekday',
+              weekDay == 'Wed'~'Weekday',  weekDay == 'Thu'~'Weekday',
+              weekDay == 'Fri'~'Weekday'))
+ 
+```
+```{r}
+#Take for crossing at same day/hour/direction across years
+YearAvg <- bike_traffic %>%group_by(Month,crossing, weekDay, hour, day,direction, WeekOrWork)%>%summarise(bikes=mean(bike_count))
+
+#Take sum of bikes at all crossings and directions for in a given weekday hour
+SumPerHourPerMonth <-YearAvg %>%group_by(Month,weekDay, hour, day, WeekOrWork)%>%summarise(bikes=sum(bikes))
+
+AvgSumAcrossWeekdayType <- SumPerHourPerMonth %>% group_by(Month, hour, WeekOrWork)%>% summarise(bikes= mean(bikes))
+
+figure<-ggplot(AvgSumAcrossWeekdayType, aes(x=hour, y=bikes, color=Month))+theme_tufte()+geom_point(size=4)+
+  geom_line(size=1.5)+facet_grid(WeekOrWork~.) +
+  ylab('Number of Bikes')+ xlab("Hour of Day")+
+  theme(text=element_text(size=20))
+figure
+
+```
+```{r}
+animatedFig<-figure+transition_reveal(hour)
+anim_save('output.gif', animatedFig)
+```
+
