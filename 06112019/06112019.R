@@ -33,5 +33,5 @@ plot<-plot+
 
 
 animate(plot, nframes=2*length(unique(mini_meteorite_proportions$year)))
-anim_save
+anim_save('meteorite.gif')
 
